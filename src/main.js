@@ -7,10 +7,15 @@ import {
   signOut,
 } from "firebase/auth";
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  query,
   serverTimestamp,
-  setDoc
+  setDoc,
+  where
 } from "firebase/firestore";
 
 const form = document.querySelector("#auth-form");

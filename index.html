@@ -31,6 +31,23 @@
     <section id="signed-in-view" hidden>
       <p id="user-email"></p>
       <button id="log-out-button">Log out</button>
+      <button id="request-report-button">
+        Hey, I need an ambiguity report
+      </button>
+
+      <article id="report-card" hidden>
+        <h2 id="report-title"></h2>
+        <p id="report-description"></p>
+        <p id="report-explanation"></p>
+
+        <button class="answer-button" data-answer="yes">
+          Yes, this is an ambiguity
+        </button>
+
+        <button class="answer-button" data-answer="no">
+          No
+        </button>
+      </article>
     </section>
 
     <p id="message" aria-live="polite"></p>
