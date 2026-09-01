@@ -1,59 +1,13 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>software-ambiguities-verify</title>
-</head>
-
-<body>
-  <!-- <div id="app"></div> -->
-  <main class="auth-page">
-    <h1>Software Ambiguities</h1>
-
-    <form id="auth-form">
-      <label>
-        Email
-        <input id="email" type="email" required autocomplete="email" />
-      </label>
-
-      <label>
-        Password
-        <input id="password" type="password" required minlength="6" autocomplete="current-password" />
-      </label>
-
-      <button type="submit">Log in</button>
-      <button type="button" id="sign-up-button">Create account</button>
-    </form>
-
-    <section id="signed-in-view" hidden>
-      <p id="user-email"></p>
-      <button id="log-out-button">Log out</button>
-      <button id="request-report-button">
-        Hey, I need an ambiguity report
-      </button>
-
-      <article id="report-card" hidden>
-        <h2 id="report-title"></h2>
-        <p id="report-description"></p>
-        <p id="report-explanation"></p>
-
-        <button class="answer-button" data-answer="yes">
-          Yes, this is an ambiguity
-        </button>
-
-        <button class="answer-button" data-answer="no">
-          No
-        </button>
-      </article>
-    </section>
-
-    <p id="message" aria-live="polite"></p>
-  </main>
-
-  <script type="module" src="/src/main.js"></script>
-</body>
-
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AmbiVerify | Requirements Ambiguity Review Study</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="bg-gray-50 text-gray-900 min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
