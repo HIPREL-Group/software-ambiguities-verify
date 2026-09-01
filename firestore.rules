@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Every read and write in this app goes through a callable Cloud Function,
+// which runs with admin credentials and bypasses these rules. Client SDK
+// access is therefore denied outright: a reviewer must never be able to read
+// the requirements collection directly (it would let them see every item
+// before it is assigned) or the submissions collection (it would let them see
+// their peers' verdicts before submitting their own).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
