@@ -1,11 +1,17 @@
 import "./style.css";
-import { auth } from "./firebase.js";
+import { auth, db } from "./firebase.js";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc
+} from "firebase/firestore";
 
 const form = document.querySelector("#auth-form");
 const signUpButton = document.querySelector("#sign-up-button");
@@ -33,7 +39,14 @@ signUpButton.addEventListener("click", async () => {
   const password = form.password.value;
 
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const { user } = await createUserWithEmailAndPassword(auth, email, password);
+
+    await setDoc(doc(db, "users", user.uid), {
+      email: user.email,
+      displayName: "",
+      createdAt: serverTimestamp(),
+    });
+
     message.textContent = "Account created.";
   } catch (error) {
     message.textContent = error.message;
@@ -42,10 +55,44 @@ signUpButton.addEventListener("click", async () => {
 
 logOutButton.addEventListener("click", () => signOut(auth));
 
-onAuthStateChanged(auth, (user) => {
+async function loadUserProfile(userId) {
+  const profileRef = doc(db, "users", userId);
+  const profileSnapshot = await getDoc(profileRef);
+
+  if (!profileSnapshot.exists()) {
+    return null;
+  }
+
+  return profileSnapshot.data();
+}
+
+onAuthStateChanged(auth, async (user) => {
   const isSignedIn = Boolean(user);
 
   form.hidden = isSignedIn;
   signedInView.hidden = !isSignedIn;
+
+  if (!user) {
+    userEmail.textContent = "";
+    return;
+  }
+
+  userEmail.textContent = "Loading profile...";
+
+  try {
+    const profile = await loadUserProfile(user.uid);
+
+    if (!profile) {
+      userEmail.textContent = "Signed in, but no profile was found.";
+      return;
+    }
+
+    const name = profile.displayName || "No display name yet";
+    userEmail.textContent = `Signed in as ${name} (${user.email})`;
+  } catch (error) {
+    userEmail.textContent = `Could not load your profile.`;
+    console.error(error);
+  }
+
   userEmail.textContent = isSignedIn ? `Signed in as ${user.email}` : "";
 });
