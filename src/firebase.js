@@ -18,11 +18,13 @@ export const functions = getFunctions(app, "us-east1");
 export const db = getFirestore(app);
 
 if (import.meta.env.DEV) {
+  // Point the emulators at this page's own origin rather than at loopback:
+  // vite.config.js proxies them, so the app works unchanged whether it is
+  // opened on the dev machine, over a forwarded port, or across the network.
+  const { origin, hostname, port } = window.location;
   try {
-    connectAuthEmulator(auth, "http://127.0.0.1:9099", {
-      disableWarnings: true,
-    });
-    connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+    connectAuthEmulator(auth, origin, { disableWarnings: true });
+    connectFunctionsEmulator(functions, hostname, Number(port) || 80);
     connectFirestoreEmulator(db, "127.0.0.1", 8080);
   } catch {
     // Emulators already connected
