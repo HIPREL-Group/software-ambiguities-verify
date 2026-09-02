@@ -38,8 +38,8 @@ function requireActiveReviewer(request) {
   const authCtx = requireAuth(request);
   if (authCtx.token.mustResetPassword) {
     throw new HttpsError(
-        "failed-precondition",
-        "Please set a new password before continuing.",
+      "failed-precondition",
+      "Please set a new password before continuing.",
     );
   }
   return authCtx;
@@ -155,6 +155,22 @@ export const setUserPassword = callable(async (request) => {
  * Assignment & submission
  * ------------------------------------------------------------------ */
 
+function ambiguityFindings(requirement) {
+  if (Array.isArray(requirement.ambiguities)) return requirement.ambiguities;
+  if (typeof requirement.ambiguities === "string" && requirement.ambiguity.trim()) {
+    return [requirement.ambiguity];
+  }
+  return [];
+}
+
+function findingsFrom(requirement, arrayField, stringField) {
+  if (Array.isArray(requirement[arrayField])) {
+    return requirement[arrayField];
+  }
+  const value = requirement[stringField];
+  return typeof value === "string" && value.trim() ? [value] : [];
+}
+
 /** Strip the answer-bearing bookkeeping fields before sending to a reviewer. */
 function publicRequirement(doc) {
   const d = doc.data();
@@ -162,8 +178,8 @@ function publicRequirement(doc) {
     id: d.id,
     description: d.description,
     spec: d.spec,
-    ambiguities: d.ambiguities || [],
-    clarifications: d.clarifications || [],
+    ambiguities: findingsFrom(d, "ambiguities", "ambiguity"),
+    clarifications: findingsFrom(d, "clarifications", "clarification"),
   };
 }
 
@@ -199,9 +215,9 @@ export const getMyAssignment = callable(async (request) => {
 
   const assignment = assignmentSnap.data();
   const requirementSnap = await db
-      .collection("requirements")
-      .doc(String(assignment.requirementId))
-      .get();
+    .collection("requirements")
+    .doc(String(assignment.requirementId))
+    .get();
   if (!requirementSnap.exists) {
     // The requirement was withdrawn after assignment; drop the stale pointer.
     await assignmentSnap.ref.delete();
@@ -225,32 +241,32 @@ export const getMyAssignment = callable(async (request) => {
 export const allocateRequirement = callable(async (request) => {
   const authCtx = requireActiveReviewer(request);
   const { ref: reviewerRef, data: reviewer } = await reviewerDoc(
-      authCtx.uid,
-      authCtx.token.email,
+    authCtx.uid,
+    authCtx.token.email,
   );
 
   if ((reviewer.submissionCount || 0) >= SUBMISSION_LIMIT) {
     throw new HttpsError(
-        "failed-precondition",
-        `You have reached the submission limit of ${SUBMISSION_LIMIT}.`,
+      "failed-precondition",
+      `You have reached the submission limit of ${SUBMISSION_LIMIT}.`,
     );
   }
 
   const assignmentRef = db.collection("assignments").doc(authCtx.uid);
   const done = new Set((reviewer.completedRequirementIds || []).map(String));
   const candidates = (await db.collection("requirements").where("active", "==", true).get())
-      .docs
-      .filter((d) => !done.has(String(d.data().id)));
+    .docs
+    .filter((d) => !done.has(String(d.data().id)));
   if (candidates.length === 0) {
     throw new HttpsError(
-        "resource-exhausted",
-        "No further requirements are available for you right now.",
+      "resource-exhausted",
+      "No further requirements are available for you right now.",
     );
   }
 
   const minCount = Math.min(...candidates.map((d) => d.data().submissionCount || 0));
   const leastReviewed = candidates.filter(
-      (d) => (d.data().submissionCount || 0) === minCount,
+    (d) => (d.data().submissionCount || 0) === minCount,
   );
   const chosen = leastReviewed[Math.floor(Math.random() * leastReviewed.length)];
 
@@ -259,8 +275,8 @@ export const allocateRequirement = callable(async (request) => {
   await db.runTransaction(async (tx) => {
     if ((await tx.get(assignmentRef)).exists) {
       throw new HttpsError(
-          "failed-precondition",
-          "You already have an active assignment. Submit it before requesting another.",
+        "failed-precondition",
+        "You already have an active assignment. Submit it before requesting another.",
       );
     }
     tx.set(assignmentRef, {
@@ -282,8 +298,8 @@ function normalizeFindings(raw, expectedLength, sideLabel) {
   }
   if (raw.length !== expectedLength) {
     throw new HttpsError(
-        "invalid-argument",
-        `Expected ${expectedLength} ${sideLabel}, received ${raw.length}.`,
+      "invalid-argument",
+      `Expected ${expectedLength} ${sideLabel}, received ${raw.length}.`,
     );
   }
   return raw.map((entry, i) => {
@@ -293,8 +309,8 @@ function normalizeFindings(raw, expectedLength, sideLabel) {
       "";
     if (!correct && explanation === "") {
       throw new HttpsError(
-          "invalid-argument",
-          `${sideLabel} #${i + 1} is marked incorrect but has no explanation.`,
+        "invalid-argument",
+        `${sideLabel} #${i + 1} is marked incorrect but has no explanation.`,
       );
     }
     return { index: i, correct, explanation: correct ? null : explanation };
@@ -324,14 +340,14 @@ export const submitResponse = callable(async (request) => {
   const requirement = requirementSnap.data();
 
   const ambiguities = normalizeFindings(
-      request.data?.ambiguities,
-      (requirement.ambiguities || []).length,
-      "Ambiguities",
+    request.data?.ambiguities,
+    findingsFrom(requirement, "ambiguities", "ambiguity").length,
+    "Ambiguities",
   );
   const clarifications = normalizeFindings(
-      request.data?.clarifications,
-      (requirement.clarifications || []).length,
-      "Clarifications",
+    request.data?.clarifications,
+    findingsFrom(requirement, "clarifications", "clarification").length,
+    "Clarifications",
   );
 
   const submissionRef = db.collection("submissions").doc();
@@ -349,8 +365,8 @@ export const submitResponse = callable(async (request) => {
     }
     if (liveAssignment.data().requirementId !== requirementId) {
       throw new HttpsError(
-          "aborted",
-          "Your assignment changed while the review was being submitted. Please reload.",
+        "aborted",
+        "Your assignment changed while the review was being submitted. Please reload.",
       );
     }
 
@@ -358,8 +374,8 @@ export const submitResponse = callable(async (request) => {
     const reviewer = reviewerSnap.exists ? reviewerSnap.data() : null;
     if ((reviewer?.submissionCount || 0) >= SUBMISSION_LIMIT) {
       throw new HttpsError(
-          "failed-precondition",
-          `You have reached the submission limit of ${SUBMISSION_LIMIT}.`,
+        "failed-precondition",
+        `You have reached the submission limit of ${SUBMISSION_LIMIT}.`,
       );
     }
 
@@ -374,14 +390,14 @@ export const submitResponse = callable(async (request) => {
       submittedAt: FieldValue.serverTimestamp(),
     });
     tx.set(
-        reviewerRef,
-        {
-          uid: authCtx.uid,
-          email: authCtx.token.email || null,
-          submissionCount: FieldValue.increment(1),
-          completedRequirementIds: FieldValue.arrayUnion(requirementId),
-        },
-        { merge: true },
+      reviewerRef,
+      {
+        uid: authCtx.uid,
+        email: authCtx.token.email || null,
+        submissionCount: FieldValue.increment(1),
+        completedRequirementIds: FieldValue.arrayUnion(requirementId),
+      },
+      { merge: true },
     );
     tx.update(requirementRef, { submissionCount: FieldValue.increment(1) });
     tx.delete(assignmentRef);
@@ -434,8 +450,8 @@ export const getAdminStats = callable(async (request) => {
   const histCounts = new Map();
   for (const n of perReviewer) histCounts.set(n, (histCounts.get(n) || 0) + 1);
   const reviewerSubmissionHistogram = [...histCounts.entries()]
-      .map(([submissions, reviewers]) => ({ submissions, reviewers }))
-      .sort((a, b) => a.submissions - b.submissions);
+    .map(([submissions, reviewers]) => ({ submissions, reviewers }))
+    .sort((a, b) => a.submissions - b.submissions);
 
   return {
     totalReviewers: reviewersSnap.size,
@@ -497,7 +513,7 @@ export const getResponseAnalytics = callable(async (request) => {
   for (const key of Object.keys(findingVotes)) {
     for (const side of SIDES) {
       findingVotes[key][side] = [...findingVotes[key][side]].map(
-          (e) => e || { genuineVotes: 0, totalVotes: 0 },
+        (e) => e || { genuineVotes: 0, totalVotes: 0 },
       );
     }
   }
